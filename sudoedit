@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+# Arguments to pass through as flags to sudoedit
+## these do not have an argument, e.g. sudoedit -A
+SUDOEDIT_FLAGS=ABkNnS
+## these have one argument, e.g. sudoedit -h HOST
+SUDOEDIT_OPTIONS=CDghpRTu
+
+declare -a sudoedit_args
+declare -a target_files
+
+# Partition arguments into flags/options to sudoedit vs files which will be edited
+while [[ "$#" -gt 0 ]]; do
+    if [[ "$1" =~ ^-.*([$SUDOEDIT_OPTIONS].*) ]]; then
+        if [[ "${#BASH_REMATCH[1]}" -gt 1 ]]; then
+            # e.g. -uUSER
+            sudoedit_args+=( "$1" )
+            shift
+        else
+            # e.g. -u USER
+            if [[ $# -le 2 ]]; then
+                /usr/bin/sudoedit # Prints sudo usage info
+                exit 1
+            fi
+            sudoedit_args+=( "$1" "$2" )
+            shift 2
+        fi
+    elif [[ "$1" =~ ^~ ]]; then
+        sudoedit_args+=( "$1" )
+        shift
+    else
+        target_files=( "$@" )
+        break
+    fi
+done
+
+# These are passed in a '//'-separated environment variable, because passing them via an
+# argument to SudoeditHook would require escaping some characters.
+# Because the paths have all gone through realpath, this is unambiguous.
+env_target_files=
+for target in "${target_files[@]}"; do
+    env_target_files="$env_target_files$target//"
+done
+target="${target%//}"
+
+SUDO_EDITOR="${SUDO_EDITOR:-$VISUAL}"
+SUDO_EDITOR="${SUDO_EDITOR:-$EDITOR}"
+
+SUDOEDIT_TARGET_FILES="$env_target_files" SUDO_EDITOR="$SUDO_EDITOR -c 'call sudoedit_undo#SudoeditHook()'" /usr/bin/sudoedit $sudoedit_args "${target_files[@]}"

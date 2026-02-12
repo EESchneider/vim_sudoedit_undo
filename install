@@ -1,0 +1,13 @@
+#/usr/bin/env bash
+
+BIN_DIR="${BIN_DIR:-"$HOME"/.local/bin}"
+if [[ ! "$PATH" =~ "$BIN_DIR" ]]; then
+	>/dev/stderr cat <<-EOF
+	Warning: $BIN_DIR was not found on \$PATH; installing \`sudoedit\` to it anyway.
+	Consider updating your \$PATH, or running with \`BIN_DIR=/path/to/user/binaries ./install\`
+	\$PATH: $PATH"
+	EOF
+fi
+
+ln ./sudoedit "$BIN_DIR"/sudoedit
+chmod +x "$BIN_DIR"/sudoedit
